@@ -1,7 +1,5 @@
 package utility.ExcelUtility;
 
-
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -29,20 +27,18 @@ import databaseConnection.MySqlConnection;
 import utility.CustomUtility;
 import com.monitorjbl.xlsx.StreamingReader;
 
-
-
 public class ExcelFileUpload {
 	private static Workbook workbook = null;
 	private static List<String> firstRow = null;
 	private static List<Object[]> excelDataList = null;
-	private static CustomUtility utility=null;
-	private static boolean splitFlag=false;
-	private static String fileDelimiter=null;
-	private static String fileName=null;
-	public static Connection conn=null;
-	
+	private static CustomUtility utility = null;
+	private static boolean splitFlag = false;
+	private static String fileDelimiter = null;
+	private static String fileName = null;
+	public static Connection conn = null;
+
 	static Logger log = Logger.getLogger(ExcelFileUpload.class);
-	
+
 	@SuppressWarnings("unused")
 	public static List<String> sheetFirstRow(Sheet dataSheet) {
 		firstRow = new ArrayList<String>();
@@ -55,92 +51,113 @@ public class ExcelFileUpload {
 					if (cell != null) {
 						DataFormatter formatter = new DataFormatter();
 						String cellValue = formatter.formatCellValue(cell);
-						if(splitFlag)
+						if (splitFlag)
 							firstRow.add(cellValue);
 						else
-						firstRow.add("["+cellValue+"]");
-						
+							firstRow.add("[" + cellValue + "]");
+
 					}
 				}
 				break;
 			}
 		}
-		if(splitFlag)
-		firstRow =convertDataToColumnData(firstRow);
-	 //   log.info("Data list {} "+ firstRow);
+		if (splitFlag)
+			firstRow = convertDataToColumnData(firstRow);
+		// log.info("Data list {} "+ firstRow);
 		return firstRow;
 	}
 
-	public static List<String> convertDataToColumnData(List<String> firstRow2){
-		String [] rowArr=null;
-		for(String rowData : firstRow2){
-			if(StringUtils.isNoneBlank(rowData)){
-				if(rowData.startsWith(fileDelimiter))
-				rowData =rowData.substring(1,rowData.length());
+	public static List<String> convertDataToColumnData(List<String> firstRow2) {
+		String[] rowArr = null;
+		for (String rowData : firstRow2) {
+			if (StringUtils.isNoneBlank(rowData)) {
+				if (rowData.startsWith(fileDelimiter))
+					rowData = rowData.substring(1, rowData.length());
 				rowArr = rowData.split(fileDelimiter);
 			}
 		}
-	//	log.info("Column Header Data Array {} "+ Arrays.toString(rowArr));
-		 List al = Arrays.asList(rowArr); 
-	//	 log.info("Column Header Data list {} "+ al);
-		 return al;
+		// log.info("Column Header Data Array {} "+ Arrays.toString(rowArr));
+		List al = Arrays.asList(rowArr);
+		// log.info("Column Header Data list {} "+ al);
+		return al;
 		// return (ArrayList<String>) al;
 	}
 
-	
 	@SuppressWarnings({ "deprecation", "static-access" })
-	public static Object getCellValue(Cell cell){
-	
+	public static Object getCellValue(Cell cell) {
+
 		DataFormatter dataFormatter = new DataFormatter();
-		
-		String cellStringValue = dataFormatter.formatCellValue(cell);
-	//	System.out.println("  cellStringValue  "+cellStringValue);
-		if(StringUtils.isBlank(cellStringValue))
-			cellStringValue=null;
+
+		Object cellStringValue = null;
+		// System.out.println(" cellStringValue "+cellStringValue);
+
+		if (cell != null) {
+			switch (cell.getCellType()) {
+			case Cell.CELL_TYPE_BOOLEAN:
+				cellStringValue = dataFormatter.formatCellValue(cell);
+				break;
+			case Cell.CELL_TYPE_NUMERIC:
+				cellStringValue = dataFormatter.formatCellValue(cell);
+				break;
+			case Cell.CELL_TYPE_STRING:
+				cellStringValue = dataFormatter.formatCellValue(cell);
+				break;
+			case Cell.CELL_TYPE_BLANK:
+				break;
+			case Cell.CELL_TYPE_ERROR:
+				cellStringValue = null;// cell.getErrorCellValue();
+				break;
+
+			// CELL_TYPE_FORMULA will never occur
+			case Cell.CELL_TYPE_FORMULA:
+				break;
+			}
+		}
 		return cellStringValue;
 	}
+
 	public static void uploadSheetData(Sheet dataSheet, int fetchSize) {
 		excelDataList = new ArrayList<>();
 		excelDataList.clear();
-		int exceptionRowIndex=0;
+		int exceptionRowIndex = 0;
 		List<String> columnList = sheetFirstRow(dataSheet);
-		log.info("column list of sheet "+columnList);
+		log.info("column list of sheet " + columnList);
 		String sheetName = dataSheet.getSheetName();
 		for (Row row : dataSheet) {
 			List<String> dataList = new ArrayList<>();
 			if (row.getRowNum() > 0) {
 				for (Cell cell : row) {
-					String cellValue = (String)getCellValue(cell);
-			//			System.out.println(row.getRowNum() + cell.getColumnIndex() +" "+cellValue);
-						dataList.add(cellValue);
-					
+					String cellValue = (String) getCellValue(cell);
+					// System.out.println(row.getRowNum() + cell.getColumnIndex() +" "+cellValue);
+					dataList.add(cellValue);
+
 				}
 				System.out.println(dataList);
-				if(splitFlag)
-				dataList =convertDataToColumnData(dataList);
-				
+				if (splitFlag)
+					dataList = convertDataToColumnData(dataList);
+
 				Object[] dataVal = dataList.toArray();
 				excelDataList.add(dataVal);
 
 				if (excelDataList != null && excelDataList.size() == fetchSize) {
 					String insertQuery = getExcelQuery(sheetName, columnList);
 					try {
-						log.info("File "+fileName+"Number of insertion list "+excelDataList.size());
-						System.out.println("File "+fileName+"Number of insertion list "+excelDataList.size());
-						CustomUtility.executeUpdateBatch(insertQuery, excelDataList,conn);
+						log.info("File " + fileName + "Number of insertion list " + excelDataList.size());
+						System.out.println("File " + fileName + "Number of insertion list " + excelDataList.size());
+						CustomUtility.executeUpdateBatch(insertQuery, excelDataList, conn);
 						excelDataList.clear();
 						exceptionRowIndex = exceptionRowIndex + fetchSize;
-						
+
 					} catch (BatchUpdateException e) {
-						log.error(" Exception {} ",e);
-						
+						log.error(" Exception {} ", e);
+
 					} catch (SQLException e) {
 						// TODO Auto-generated catch block
-						log.error(" Exception {} ",e);
-					//	break;
+						log.error(" Exception {} ", e);
+						// break;
 					} catch (ClassNotFoundException e) {
 						// TODO Auto-generated catch block
-						log.error(" Exception {} ",e);
+						log.error(" Exception {} ", e);
 					}
 				}
 			}
@@ -151,18 +168,18 @@ public class ExcelFileUpload {
 		if (excelDataList != null && excelDataList.size() > 0) {
 			String insertQuery = getExcelQuery(sheetName, columnList);
 			try {
-				CustomUtility.executeUpdateBatch(insertQuery, excelDataList,conn);
+				CustomUtility.executeUpdateBatch(insertQuery, excelDataList, conn);
 			} catch (BatchUpdateException e) {
 				log.info("Batch update exception occured maintained logs for excel in system");
 				System.out.println("Batch update exception occured maintained logs for excel in system");
-				//ExcelUploadLogger.excelUploadLogger(e,exceptionRowIndex);
+				// ExcelUploadLogger.excelUploadLogger(e,exceptionRowIndex);
 				e.printStackTrace();
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
-				 System.out.println("Exception occured in system {}"+e);
+				System.out.println("Exception occured in system {}" + e);
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
-				 System.out.println(" Exception {} "+e);
+				System.out.println(" Exception {} " + e);
 			}
 
 		}
@@ -181,7 +198,7 @@ public class ExcelFileUpload {
 
 	}
 
-	public static void excelExceutor(String filePath,int fetchSize) {
+	public static void excelExceutor(String filePath, int fetchSize) {
 		FileInputStream inp = null;
 		try {
 			inp = new FileInputStream(filePath);
@@ -206,11 +223,11 @@ public class ExcelFileUpload {
 	public static void getSheets(Workbook wb, int fetchSize) {
 		if (wb != null) {
 			int numberSheet = wb.getNumberOfSheets();
-			System.out.println("Total Number of sheet in excel "+fileName +" file " + numberSheet);
+			System.out.println("Total Number of sheet in excel " + fileName + " file " + numberSheet);
 			for (int i = 0; i < numberSheet; i++) {
 				Sheet dataSheet = wb.getSheetAt(i);
 				log.info("Currently in sheet number " + i + " name " + dataSheet.getSheetName()
-				+ " and calling sheet Executor");	
+						+ " and calling sheet Executor");
 				System.out.println("Currently in sheet number " + i + " name " + dataSheet.getSheetName()
 						+ " and calling sheet Executor");
 				sheetExceutor(dataSheet, fetchSize);
@@ -226,9 +243,9 @@ public class ExcelFileUpload {
 	}
 
 	public static void main(String args[]) {
-		splitFlag=false;
-		fileDelimiter="~";
-		int lineItem =7000;
+		splitFlag = false;
+		fileDelimiter = "~";
+		int lineItem = 7000;
 		MySqlConnection mysql = new MySqlConnection();
 		try {
 			conn = mysql.getConnection();
@@ -236,17 +253,16 @@ public class ExcelFileUpload {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println("Connection Id "+conn);
+		System.out.println("Connection Id " + conn);
 		fileName = "PD_HERSMATERIAL_05022021_2.xlsx";
-		long startTime =System.currentTimeMillis();
+		long startTime = System.currentTimeMillis();
 		String systemPath = System.getenv("JAVA_HOME");
-		systemPath="D:\\Local D\\MasterDataOnline";
-		String filePath = systemPath + File.separator +  "DataLoad" + File.separator
-				+fileName;
-		excelExceutor(filePath,lineItem);
-		long endTime =System.currentTimeMillis();
-		log.info("Total time taken "+(endTime-startTime)+" milliseconds");
-		System.out.println("Total time taken "+fileName + "  "+(endTime-startTime)+" milliseconds");
-		log.info("Total time taken "+((endTime-startTime)/1000)+" sec");
+		systemPath = "D:\\Local D\\MasterDataOnline";
+		String filePath = systemPath + File.separator + "DataLoad" + File.separator + fileName;
+		excelExceutor(filePath, lineItem);
+		long endTime = System.currentTimeMillis();
+		log.info("Total time taken " + (endTime - startTime) + " milliseconds");
+		System.out.println("Total time taken " + fileName + "  " + (endTime - startTime) + " milliseconds");
+		log.info("Total time taken " + ((endTime - startTime) / 1000) + " sec");
 	}
 }
