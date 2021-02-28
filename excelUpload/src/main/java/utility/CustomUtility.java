@@ -922,33 +922,9 @@ public class CustomUtility {
 
 		}
 
-		// for(int j=0;j<getJSONGridArray.size();j++){
-		// JSONObject gridName = (JSONObject) getJSONGridArray.get(j);
-
 		Set<String> jsonKey = getJSONGrid.keySet();
 		log.info("Insert Query Method " + jsonKey.toString());
 		log.info("Json Key  " + jsonKey);
-
-		/*
-		 * Iterator<String> itr=jsonKey.iterator(); while(itr.hasNext()) {
-		 * String tableName = itr.next(); JSONArray jsonArray = (JSONArray)
-		 * getJSONGrid.get(tableName); for(int i=0;i<jsonArray.size();i++) {
-		 * JSONObject object = (JSONObject) jsonArray.get(i); List<String>
-		 * listkey = new ArrayList<String>(); List<String> listValues = new
-		 * ArrayList<String>(); Set<String> insideJsonKey = object.keySet();
-		 * Iterator<String> listitr=insideJsonKey.iterator();
-		 * while(listitr.hasNext()) { String insideListKey=listitr.next();
-		 * String queryValues =(String)object.get(insideListKey);
-		 * if(StringUtils.isNotBlank(queryValues)) { listkey.add(insideListKey);
-		 * listValues.add((String)object.get(insideListKey)); } }
-		 * insertQuery.add("INSERT INTO META_TT_"+tableName+"  (MATERIALNO,"
-		 * +String.join(" ,",listkey)+") values ('"+objectNumber+"','"+String.
-		 * join("','",listValues)+"') ;"); }
-		 * 
-		 * } //} long endtime = System.currentTimeMillis();
-		 * log.info("Time taken to convert json to insert query {}"+
-		 * (endtime-starttime)+" ms" );
-		 */
 		return insertQuery;
 	}
 
